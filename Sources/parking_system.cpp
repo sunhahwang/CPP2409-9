@@ -7,7 +7,7 @@ using namespace std;
 const int EMPTY = 0;        // 비어있는 공간  
 const int MOTORBIKE = 1;    // 오토바이 공간
 const int COMPACT = 2;      // 경차 공간
-const int REGULAR = 3;      // 일반차 공간
+const int REGULAR = 3;       // 일반차 공간
 const int LARGE = 4;        // 대형차 공간
 const int ELECTRIC = 5;     // 전기차 공간
 
