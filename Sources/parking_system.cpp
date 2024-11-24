@@ -135,7 +135,7 @@ void park(int row, int col, int type) {
         if (motorbike_count[row][col] < 2) { 
             // 한 공간에 최대 두 대의 오토바이가 주차될 수 있도록
             motorbike_count[row][col]++;
-            parking[row][col] = MOTORBIKE;
+            parking[row][col] = MOTORBIKE; 
         }
         else {
             // 오토바이 2대로 모두 찬 경우 메세지 출력
