@@ -130,7 +130,7 @@ vector<pair<int, int>> recommendSpots(int type, bool charging = false, int max =
 }
 
 // 차량 주차 함수
-void park(int row, int col, int type) {
+void park(int row, int col, int type) { 
     if (type == MOTORBIKE) {
         if (motorbike_count[row][col] < 2) { 
             // 한 공간에 최대 두 대의 오토바이가 주차될 수 있도록
