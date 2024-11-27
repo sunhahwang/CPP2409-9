@@ -81,6 +81,7 @@ void displayMap() {
 // 차량 타입에 따른 주차 공간 추천 함수
 vector<pair<int, int>> recommendSpots(int type, bool charging = false, int max = 5) {
     vector<pair<int, int>> recommend; // 추천되는 주차 공간을 저장할 벡터
+    vector<pair<int, int>> compact_only; // 경차 전용 자리 벡터
     vector<pair<int, int>> half_full; // 이미 오토바이가 한 대 있는 공간을 저장할 벡터
     vector<pair<int, int>> empty;     // 비어 있는 공간을 나타내는 벡터
 
@@ -96,6 +97,15 @@ vector<pair<int, int>> recommendSpots(int type, bool charging = false, int max =
                 }
                 else if (motorbike_count[i][j] == 0 && parking[i][j] == EMPTY) {
                     // 빈 공간인 경우 낮은 우선순위를 가진 벡터에 추가
+                    empty.push_back({i, j});
+                }
+            }
+            // 경차일 경우 우선적으로 경차 전용 자리를 확인
+            else if (type == COMPACT) {
+                if (parking[i][j] == COMPACT) {
+                    compact_only.push_back({i, j});
+                }
+                else if (parking[i][j] == EMPTY) {
                     empty.push_back({i, j});
                 }
             }
@@ -119,8 +129,14 @@ vector<pair<int, int>> recommendSpots(int type, bool charging = false, int max =
     }
 
     // 우선순위에 따라 정렬
-    recommend.insert(recommend.end(), half_full.begin(), half_full.end());
-    recommend.insert(recommend.end(), empty.begin(), empty.end());
+    if (type == COMPACT) {
+        recommend.insert(recommend.end(), compact_only.begin(), compact_only.end());
+        recommend.insert(recommend.end(), empty.begin(), empty.end());
+    }
+    else if (type == MOTORBIKE) {
+        recommend.insert(recommend.end(), half_full.begin(), half_full.end());
+        recommend.insert(recommend.end(), empty.begin(), empty.end());
+    }
 
     // 최대 개수를 초과한 경우 조정
     if (recommend.size() > max) {
