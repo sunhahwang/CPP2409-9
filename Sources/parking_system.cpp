@@ -11,37 +11,52 @@ const int REGULAR = 3;       // 일반차 공간
 const int LARGE = 4;        // 대형차 공간
 const int ELECTRIC = 5;     // 전기차 공간
 
+// 주차 상태 설정
+const int OCCUPIED = 1; // 주차된 상태
+const int VACANT = 0; // 비어있는 상태
+
 // 주자창 크기 설정
 const int rows = 4; // 주차장의 세로 길이
-const int cols = 10;// 주차장의 가로 길이
+const int cols = 10; // 주차장의 가로 길이
 
 // 2차원 벡터 선언(주차 상태 표시)
 vector<vector<int>> parking;           // 각 칸의 주차 공간 타입 저장
 vector<vector<int>> motorbike_count;   // 각 칸에 주차된 오토바이 개수 저장
+vector<vector<int>> parking_status;    // 각 칸의 주차 상태 저장
 
 // 주차 공간 타입에 대한 심볼 설정
-char parkingSymbol (int type, int motorbike_count = 0) {
-    switch (type) {
-        case MOTORBIKE:
-            if (motorbike_count == 2)
-                return 'M'; // 한 칸에 오토바이 2대 -> 'M'
-            else   
-                return 'm'; // 한 칸에 오토바이 1대 -> 'm'
-        case COMPACT:
-            return 'C';
-        case REGULAR:
-            return 'R';
-        case LARGE:
-            return 'L';
-        case ELECTRIC:
-            return 'E';
-        default:
-            return ' ';     // 비어있는 공간은 공백으로 표시
+char parkingSymbol (int status, int type, int motorbike_count = 0) {
+    if (type == MOTORBIKE) {
+        if (motorbike_count == 2) return 'M'; // 두 대 주차된 경우
+        else if (motorbike_count == 1) return 'm'; // 한 대 주차된 경우
+    }
+
+    if (status == OCCUPIED) { // 주차된 상태일 경우 대문자로 표시
+        switch (type) {
+            case COMPACT: return 'C';
+            case REGULAR: return 'R';
+            case LARGE: return 'L';
+            case ELECTRIC: return 'E';
+            default: return ' ';
+        }
+    } else { // 비어 있는 상태일 경우 소문자로 표시
+        switch (type) {
+            case COMPACT: return 'c';
+            case ELECTRIC: return 'e';
+            default: return ' ';
+        }
     }
 }
 
 // 초기 주차 공간 세팅
 void setParking() {
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            parking[i][j] = EMPTY;  // 초기 상태를 빈공간으로
+            parking_status[i][j] = VACANT;  // 주차되지 않은 상태로 저장
+        }
+    }
+
     // 왼쪽, 오른쪽 끝 자리를 경차 전용자리로
     for (int i = 0; i < rows; ++i) {
         parking[i][0] = COMPACT;
@@ -70,7 +85,7 @@ void displayMap() {
         for (int j = 0; j < cols; ++j) {
             // 공간에 맞는 symbol가져오기
             // 오토바이의 개수에 따른 symbol가져오기
-            char symbol = parkingSymbol(parking[i][j], motorbike_count[i][j]);
+            char symbol = parkingSymbol(parking_status[i][j], parking[i][j], motorbike_count[i][j]);
             cout << "| " << symbol << " ";
         }
         cout << "|" << endl;
@@ -147,19 +162,27 @@ vector<pair<int, int>> recommendSpots(int type, bool charging = false, int max =
 
 // 차량 주차 함수
 void park(int row, int col, int type) { 
-    if (type == MOTORBIKE) {
-        if (motorbike_count[row][col] < 2) { 
-            // 한 공간에 최대 두 대의 오토바이가 주차될 수 있도록
-            motorbike_count[row][col]++;
-            parking[row][col] = MOTORBIKE; 
-        }
-        else {
-            // 오토바이 2대로 모두 찬 경우 메세지 출력
-            cout << "해당 자리는 이미 최대 수의 오토바이가 존재합니다." << endl;
-        }
+    if (row < 0 || row >= rows || col < 0 || col >= cols) {
+        cout << "주차장을 벗어난 위치입니다." << endl;
+        return;
     }
+
+    if (parking_status[row][col] == OCCUPIED) {
+        cout << "해당 자리는 이미 점유 중입니다." << endl;
+        return;
+    }
+
+    if (type == MOTORBIKE) {
+        motorbike_count[row][col]++;
+        if (motorbike_count[row][col] == 2) {
+            parking_status[row][col] = OCCUPIED;
+        }
+    } else {
+        parking_status[row][col] = OCCUPIED; // 해당 자리에 주차
+    }
+
     // 대형차의 경우 두 칸 차지
-    else if (type == LARGE) {
+    if (type == LARGE) {
         parking[row][col] = LARGE;
         parking[row][col + 1] = LARGE;
     }
@@ -177,8 +200,10 @@ int main() {
     // 비어있는 상태(EMPTY)로 초기화
     for (int i = 0; i < rows; ++i) {
         vector<int> row(cols, EMPTY);   // 주차 공간 타입 초기화
+        vector<int> status_row(cols, VACANT); // 주차 상태 초기화
         vector<int> motorbike_row(cols, 0); // 오토바이 개수 초기화
         parking.push_back(row);
+        parking_status.push_back(status_row);
         motorbike_count.push_back(motorbike_row);
     }
     setParking();   // 초기 설정
