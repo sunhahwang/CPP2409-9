@@ -292,6 +292,21 @@ int main() {
             cout << "주차할 자리를 선택하세요 (행, 열) : ";
             cin >> select_r >> select_c;
 
+            // 추천 자리를 선택했는지 확인
+            bool is_recommended_spot = false;
+            for (auto spot : recommended_spots) {
+                if (spot.first == select_r && spot.second == select_c) {
+                    is_recommended_spot = true;
+                    break;
+                }
+            }
+
+            // 추천 자리를 선택하지 않은 경우 경고문 출력
+            if (!is_recommended_spot) {
+                cout << "추천 자리가 아닙니다." << endl;
+
+            }
+
             // 차량의 종류에 맞게 주차 처리
             if (command == "motorbike") {
                 park(select_r, select_c, MOTORBIKE); 
