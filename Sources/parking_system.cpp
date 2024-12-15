@@ -307,6 +307,11 @@ int main() {
         else if (command == "electric") {
             recommended_spots = recommend_spots(ELECTRIC);
         }
+        // 잘못된 입력의 경우
+        else {
+            cout << "잘못된 입력입니다." << endl;
+            continue;
+        }
 
         // #6. 추천된 자리 출력 및 주차
         if (recommended_spots.empty()) {
