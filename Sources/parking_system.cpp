@@ -179,6 +179,16 @@ void park(int row, int col, int type) {
         return; // 이미 점유된 자리
     }
 
+    // 전용 주차 공간 확인 및 경고문 출력
+    if (parking[row][col] == COMPACT && type != COMPACT) {
+        cout << "이 자리는 경차 전용 자리입니다. 다른 차량은 주차할 수 없습니다." << endl;
+        return; // 경차가 아닌 차량의 전용 자리 주차 방지
+    }
+    if (parking[row][col] == ELECTRIC && type != ELECTRIC) {
+        cout << "이 자리는 전기차 충전 전용 자리입니다. 다른 차량은 주차할 수 없습니다." << endl;
+        return; // 전기차가 아닌 차량의 전용 자리 주차 방지
+    }
+
     // 대형 차량일 경우 두 칸 확인 및 처리
     if (type == LARGE) {
         if (col < COLS - 1 && parking_status[row][col] == VACANT && parking_status[row][col + 1] == VACANT) {
@@ -211,6 +221,18 @@ void park(int row, int col, int type) {
     DisplayMap(); // 주차 후 맵 출력
 }
 
+// 주차장이 포화 상태인지 확인하는 함수
+bool IsParkingFull() {
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLS; j++) {
+            if (parking_status[i][j] == VACANT) {
+                return false; // 한 칸이라도 빈칸이 있으면 포화 false
+            }
+        }
+    }
+    return true; // 모든 칸이 주차 완료 상태
+}
+
 int main() {
     // 상태 대입
     // 행의 크기만큼 열을 제작하여 push
@@ -227,7 +249,14 @@ int main() {
     DisplayMap();   // 맵 출력
 
     // mud game처럼 종료신호를 받기 전까지 무한 루프
-    while(true){
+    while(true) {
+
+        // #0. 주차장의 포화상태 확인하기
+        if (IsParkingFull()) {
+            cout << "주차장의 모든 칸이 포화 상태입니다. 시스템을 종료합니다." << endl;
+            break;
+        } 
+
         // #1. 명령어 입력받기
         string command;
         cout << "차량의 종류나 옵션을 입력해주세요 (motorbike, compact, regular, large, electric, map, exit) : ";
@@ -280,52 +309,52 @@ int main() {
         }
 
         // #6. 추천된 자리 출력 및 주차
-        if (recommended_spots.empty() == 0) {
-            cout << "추천 주차 자리 : ";
-            for (auto spot : recommended_spots) {
-                cout << "(" << spot.first << ", " << spot.second << ") ";
-            }
-            cout << endl;
+        if (recommended_spots.empty()) {
+            cout << "해당 차량의 추천 자리가 없습니다." << endl;
+            continue;
+        }
 
-            // 자리 선택
-            int select_r, select_c;
-            cout << "주차할 자리를 선택하세요 (행, 열) : ";
-            cin >> select_r >> select_c;
+        cout << "추천 주차 자리 : ";
+        for (auto spot : recommended_spots) {
+            cout << "(" << spot.first << ", " << spot.second << ") ";
+        }
+        cout << endl;
 
-            // 추천 자리를 선택했는지 확인
-            bool is_recommended_spot = false;
-            for (auto spot : recommended_spots) {
-                if (spot.first == select_r && spot.second == select_c) {
-                    is_recommended_spot = true;
-                    break;
-                }
-            }
+        // 자리 선택
+        int select_r, select_c;
+        cout << "주차할 자리를 선택하세요 (행, 열) : ";
+        cin >> select_r >> select_c;
 
-            // 추천 자리를 선택하지 않은 경우 경고문 출력
-            if (!is_recommended_spot) {
-                cout << "추천 자리가 아닙니다." << endl;
+        // 추천 자리를 선택했는지 확인
+        bool is_recommended_spot = false;
+        for (auto spot : recommended_spots) {
+            if (spot.first == select_r && spot.second == select_c) {
+                is_recommended_spot = true;
+                break;
+            }
+        }
 
-            }
+        // 추천 자리를 선택하지 않은 경우 경고문 출력
+        if (!is_recommended_spot) {
+            cout << "추천 자리가 아닙니다." << endl;
 
-            // 차량의 종류에 맞게 주차 처리
-            if (command == "motorbike") {
-                park(select_r, select_c, MOTORBIKE); 
-            }
-            else if (command == "compact") {
-                park(select_r, select_c, COMPACT);
-            }
-            else if (command == "regular") {
-                park(select_r, select_c, REGULAR);
-            }
-            else if (command == "large") {
-                park(select_r, select_c, LARGE);
-            }
-            else if (command == "electric") {
-                park(select_r, select_c, ELECTRIC);
-            }
-            else {
-                cout << "추천할 자리가 없습니다." << endl;
-            }
+        }
+
+        // 차량의 종류에 맞게 주차 처리
+        if (command == "motorbike") {
+            park(select_r, select_c, MOTORBIKE); 
+        }
+        else if (command == "compact") {
+            park(select_r, select_c, COMPACT);
+        }
+        else if (command == "regular") {
+            park(select_r, select_c, REGULAR);
+        }
+        else if (command == "large") {
+            park(select_r, select_c, LARGE);
+        }
+        else if (command == "electric") {
+            park(select_r, select_c, ELECTRIC);
         }
     }
 }
