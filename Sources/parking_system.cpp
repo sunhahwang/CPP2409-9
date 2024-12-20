@@ -94,67 +94,196 @@ void DisplayMap() {
     cout << line << endl;
 }
 
+// 주차 자리의 양 옆 각각 두 자리씩 확인하는 함수
+bool CheckSideEmpty(int row, int col) {
+    // 왼쪽에 두 자리 확인
+    if (col > 1) { // 맵을 벗어난 판단을 막기 위한 조건
+        if (parking_status[row][col - 1] == VACANT && 
+            parking_status[row][col - 2] == VACANT &&
+            parking[row][col - 1] != COMPACT && 
+            parking[row][col - 2] != COMPACT && 
+            parking[row][col - 1] != ELECTRIC && 
+            parking[row][col - 2] != ELECTRIC &&
+            parking[row][col - 1] != MOTORBIKE &&
+            parking[row][col - 2] != MOTORBIKE) {
+            return true;
+        }
+    }
+
+    // 오른쪽에 두 자리 확인
+    if (col < COLS - 2) { // 맵을 벗어난 판단을 막기 위한 조건
+        if (parking_status[row][col + 1] == VACANT && 
+            parking_status[row][col + 2] == VACANT &&
+            parking[row][col + 1] != COMPACT && 
+            parking[row][col + 2] != COMPACT && 
+            parking[row][col + 1] != ELECTRIC && 
+            parking[row][col + 2] != ELECTRIC &&
+            parking[row][col + 1] != MOTORBIKE &&
+            parking[row][col + 2] != MOTORBIKE) {
+            return true; 
+        }
+    }
+
+    // 양 옆 모두 비어있지 않거나 판단 시 맵을 벗어나는 경우 false
+    return false;
+}
+
+// 주차 자리의 양 옆 각각 한 자리씩 확인하는 함수
+bool CheckSideFull(int row, int col) {
+    bool left_check = false; // 왼쪽 자리의 채워짐 여부
+
+    // 왼쪽 한 자리 확인 
+    if (col > 0) { // 맵을 벗어난 판단을 막기 위한 조건
+        if (parking_status[row][col - 1] == OCCUPIED ||
+            parking[row][col - 1] == COMPACT ||
+            parking[row][col - 1] == ELECTRIC ||
+            parking[row][col - 1] == MOTORBIKE) {
+            left_check = true;
+        }
+    }
+
+    // 오른쪽 한 자리 확인
+    if (col < COLS - 1 && left_check) { // 맵을 벗어난 판단을 막고 왼쪽이 채워졌을 때
+        if (parking_status[row][col + 1] == OCCUPIED ||
+            parking[row][col + 1] == COMPACT ||
+            parking[row][col + 1] == ELECTRIC ||
+            parking[row][col + 1] == MOTORBIKE) {
+            return true;
+        }
+    }
+
+    // 두 자리 모두 비워져있거나 한 자리만 채워진 경우 false
+    return false;
+}
+
 // 차량 타입에 따른 주차 공간 추천 함수
 vector<pair<int, int>> recommend_spots(int type, bool charging = false, int max = 5) {
-    vector<pair<int, int>> recommend; // 추천되는 주차 공간을 저장할 벡터
+    vector<pair<int, int>> recommend;    // 추천되는 주차 공간을 저장할 벡터
     vector<pair<int, int>> compact_only; // 경차 전용 자리 벡터
-    vector<pair<int, int>> half_full; // 이미 오토바이가 한 대 있는 공간을 저장할 벡터
-    vector<pair<int, int>> empty;     // 비어 있는 공간을 나타내는 벡터
+    vector<pair<int, int>> half_full;    // 이미 오토바이가 한 대 있는 공간을 저장할 벡터
+    vector<pair<int, int>> empty;        // 비어 있는 공간을 나타내는 벡터
+    vector<pair<int, int>> for_large;    // 대형 차랑의 최대 자리를 위한 추천 자리 벡터
+    vector<pair<int, int>> isolated;     // (양 옆이 채워진) 고립된 자리 벡터
+
+    // 우선순위: recommend(0) - compact_only, half_full(1) - isolated(2)- for_large(3) - empty(4)
 
     // 주차 자리를 순차적으로 훑으며 탐색
     // 일정 개수를 채울 경우 탐색 중단 후 반환
     for (int i = 0; i < ROWS; ++i) {
         for (int j = 0; j < COLS; ++j) {
-            // 이미 점유된 자리는 무시
+            // 점유된 자리는 무시
             if (parking_status[i][j] == OCCUPIED)
                 continue;
 
-            // 오토바이일 경우, 오토바이의 개수(0 or 2)에 따라 추천
+            // 오토바이일 경우
             if (type == MOTORBIKE) {
                 if (motorbike_count[i][j] == 1 && parking[i][j] == MOTORBIKE) {
-                    // 이미 한 대가 주차된 공간인 경우 높은 우선순위를 가진 벡터에 추가
+                    // 이미 한 대가 주차된 공간인 경우 1번 우선순위를 가진 벡터에 추가
                     half_full.push_back({i, j});
                 }
+                else if (CheckSideFull(i, j) && parking[i][j] == EMPTY) {
+                    // 고립된 자리인 경우 2번 우선순위를 가진 벡터에 추가
+                    isolated.push_back({i, j});
+                }
+                else if (CheckSideEmpty(i, j) && parking[i][j] == EMPTY) {
+                    // 양 옆 중 하나라도 두 자리씩 빈 경우 3번 우선순위를 가진 벡터에 추가
+                    for_large.push_back({i, j});
+                }
                 else if (motorbike_count[i][j] == 0 && parking[i][j] == EMPTY) {
-                    // 빈 공간인 경우 낮은 우선순위를 가진 벡터에 추가
+                    // 빈 공간인 경우 4번 우선순위를 가진 벡터에 추가
                     empty.push_back({i, j});
                 }
             }
-            // 경차일 경우 우선적으로 경차 전용 자리를 확인
+
+            // 경차일 경우
             else if (type == COMPACT) {
                 if (parking[i][j] == COMPACT) {
+                    // 경차 전용 자리인 경우 1번 우선순위를 가진 벡터에 추가
                     compact_only.push_back({i, j});
                 }
+                else if (CheckSideFull(i, j) && parking[i][j] == EMPTY) {
+                    // 고립된 자리인 경우 2번 우선순위를 가진 벡터에 추가
+                    isolated.push_back({i, j});
+                }
+                else if (CheckSideEmpty(i, j) && parking[i][j] == EMPTY) {
+                    // 양 옆 중 하나라도 두 자리씩 빈 경우 3번 우선순위를 가진 벡터에 추가
+                    for_large.push_back({i, j});
+                }
                 else if (parking[i][j] == EMPTY) {
+                    // 빈 공간인 경우 4번 우선순위를 가진 벡터에 추가
                     empty.push_back({i, j});
                 }
             }
-            // 전기차일 경우, 충전 여부에 따라 추천
+
+            // 전기차일 경우
             else if (type == ELECTRIC) {
                 if (charging && parking[i][j] == ELECTRIC) {
-                    recommend.push_back({i, j});  // 충전이 필요한 경우 전기차 자리 추천
+                    // 전기차 충전을 원하는 경우 0번 우선순위를 가진 벡터에 추가
+                    recommend.push_back({i, j});  
+                }
+                else if (!charging && (CheckSideFull(i, j) && parking[i][j] == EMPTY)) {
+                    // 충전을 원하지 않고 고립된 자리인 경우 2번 우선순위를 가진 벡터에 추가
+                    isolated.push_back({i, j});
+                }
+                else if (!charging && (CheckSideEmpty(i, j) && parking[i][j] == EMPTY)) {
+                    // 충전을 원하지 않고 양 옆 중 하나라도 두 자리씩 빈 경우 3번 우선순위를 가진 벡터에 추가
+                    for_large.push_back({i, j}); 
                 }
                 else if (!charging && parking[i][j] == EMPTY) {
-                    recommend.push_back({i, j});  // 충전이 아닌 경우 일반 자리 추천
+                    // 충전을 원하지 않고 빈 공간인 경우 4번 우선순위를 가진 벡터에 추가
+                    empty.push_back({i, j}); 
                 }
             }
-            // 일반 차량 주차 공간 추천
-            else if (type == COMPACT && (parking[i][j] == COMPACT || parking[i][j] == EMPTY)) 
-                recommend.push_back({i, j});
-            else if (type == LARGE && (j < COLS - 1 && (parking[i][j] == EMPTY && parking[i][j + 1] == EMPTY)))
-                recommend.push_back({i, j});
-            else if (type == REGULAR && parking[i][j] == EMPTY)
-                recommend.push_back({i, j});
+
+            // 대형차일 경우
+            else if (type == LARGE) {
+                if (j < COLS - 1 && (parking[i][j] == EMPTY && parking[i][j + 1] == EMPTY))
+                    // 두 자리 주차를 위해 0번 우선순위를 가진 벡터에 추가
+                    recommend.push_back({i, j});
+            }
+
+            // 일반차일 경우
+            else if (type == REGULAR) {
+                if (CheckSideFull(i, j) && parking[i][j] == EMPTY) {
+                    // 고립된 자리인 경우 2번 우선순위를 가진 벡터에 추가
+                    isolated.push_back({i, j});
+                }
+                else if (CheckSideEmpty(i, j) && parking[i][j] == EMPTY) {
+                    // 양 옆 중 하나라도 두 자리씩 빈 경우 3번 우선순위를 가진 벡터에 추가
+                    for_large.push_back({i, j});
+                }
+                else if (parking[i][j] == EMPTY) {
+                    // 빈 공간인 경우 4번 우선순위를 가진 벡터에 추가
+                    empty.push_back({i, j});
+                }
+            }
         }
     }
 
     // 우선순위에 따라 정렬
-    if (type == COMPACT) {
-        recommend.insert(recommend.end(), compact_only.begin(), compact_only.end());
+    if (type == MOTORBIKE) {
+        recommend.insert(recommend.end(), half_full.begin(), half_full.end());
+        recommend.insert(recommend.end(), isolated.begin(), isolated.end());
+        recommend.insert(recommend.end(), for_large.begin(), for_large.end());
         recommend.insert(recommend.end(), empty.begin(), empty.end());
     }
-    else if (type == MOTORBIKE) {
-        recommend.insert(recommend.end(), half_full.begin(), half_full.end());
+
+    else if (type == COMPACT) {
+        recommend.insert(recommend.end(), compact_only.begin(), compact_only.end());
+        recommend.insert(recommend.end(), isolated.begin(), isolated.end());
+        recommend.insert(recommend.end(), for_large.begin(), for_large.end());
+        recommend.insert(recommend.end(), empty.begin(), empty.end());
+    }
+
+    else if (type == ELECTRIC) {
+        recommend.insert(recommend.end(), isolated.begin(), isolated.end());
+        recommend.insert(recommend.end(), for_large.begin(), for_large.end());
+        recommend.insert(recommend.end(), empty.begin(), empty.end());
+    }
+
+    else if (type == REGULAR) {
+        recommend.insert(recommend.end(), isolated.begin(), isolated.end());
+        recommend.insert(recommend.end(), for_large.begin(), for_large.end());
         recommend.insert(recommend.end(), empty.begin(), empty.end());
     }
 
@@ -165,28 +294,38 @@ vector<pair<int, int>> recommend_spots(int type, bool charging = false, int max 
     return recommend;
 }
 
-// 차량 주차 함수
-void park(int row, int col, int type) { 
+// 경고문 출력 함수
+bool Warning(int row, int col, int type) {
     // 입력 범위 확인
     if (row < 0 || row >= ROWS || col < 0 || col >= COLS) {
         cout << "주차장을 벗어난 위치입니다." << endl;
-        return; // 잘못된 범위
+        return true; // 잘못된 범위
     }
 
     // 이미 점유된 자리인지 확인
     if (parking_status[row][col] == OCCUPIED) {
         cout << "해당 자리는 이미 점유 중입니다." << endl;
-        return; // 이미 점유된 자리
+        return true; // 이미 점유된 자리
     }
 
     // 전용 주차 공간 확인 및 경고문 출력
     if (parking[row][col] == COMPACT && type != COMPACT) {
         cout << "이 자리는 경차 전용 자리입니다. 다른 차량은 주차할 수 없습니다." << endl;
-        return; // 경차가 아닌 차량의 전용 자리 주차 방지
+        return true; // 경차가 아닌 차량의 전용 자리 주차 방지
     }
     if (parking[row][col] == ELECTRIC && type != ELECTRIC) {
         cout << "이 자리는 전기차 충전 전용 자리입니다. 다른 차량은 주차할 수 없습니다." << endl;
-        return; // 전기차가 아닌 차량의 전용 자리 주차 방지
+        return true; // 전기차가 아닌 차량의 전용 자리 주차 방지
+    }
+
+    return false;
+}
+
+// 차량 주차 함수
+void Park(int row, int col, int type, bool warning) { 
+    // 경고문이 출력되었을 경우 주차하지 않고 return
+    if (warning) {
+        return;
     }
 
     // 대형 차량일 경우 두 칸 확인 및 처리
@@ -339,27 +478,39 @@ int main() {
             }
         }
 
-        // 추천 자리를 선택하지 않은 경우 경고문 출력
-        if (!is_recommended_spot) {
-            cout << "추천 자리가 아닙니다." << endl;
-
-        }
+        // 경고문 출력 여부 확인
+        bool warning = false;
 
         // 차량의 종류에 맞게 주차 처리
         if (command == "motorbike") {
-            park(select_r, select_c, MOTORBIKE); 
+            // (해당될 경우) 경고문 출력 후 여부를 true로
+            warning = Warning(select_r, select_c, MOTORBIKE);
+            Park(select_r, select_c, MOTORBIKE, warning); 
         }
         else if (command == "compact") {
-            park(select_r, select_c, COMPACT);
+            // (해당될 경우) 경고문 출력 후 여부를 true로
+            warning = Warning(select_r, select_c, COMPACT);
+            Park(select_r, select_c, COMPACT, warning);
         }
         else if (command == "regular") {
-            park(select_r, select_c, REGULAR);
+            // (해당될 경우) 경고문 출력 후 여부를 true로
+            warning = Warning(select_r, select_c, REGULAR);
+            Park(select_r, select_c, REGULAR, warning);
         }
         else if (command == "large") {
-            park(select_r, select_c, LARGE);
+            // (해당될 경우) 경고문 출력 후 여부를 true로
+            warning = Warning(select_r, select_c, LARGE);
+            Park(select_r, select_c, LARGE, warning);
         }
         else if (command == "electric") {
-            park(select_r, select_c, ELECTRIC);
+            // (해당될 경우) 경고문 출력 후 여부를 true로
+            warning = Warning(select_r, select_c, ELECTRIC);
+            Park(select_r, select_c, ELECTRIC, warning);
+        }
+
+        // 추천 자리를 선택하지 않은 경우 경고문 출력 여부를 확인하고 안내문 출력
+        if (!is_recommended_spot && !warning) {
+            cout << "추천 자리가 아닙니다." << endl;
         }
     }
 }
