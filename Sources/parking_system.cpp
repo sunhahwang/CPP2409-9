@@ -13,7 +13,7 @@ const int ELECTRIC = 5;     // 전기차 공간
 
 // 주차 상태 설정
 const int OCCUPIED = 1; // 주차된 상태
-const int VACANT = 0; // 비어있는 상태
+const int VACANT = 0; // 비어있는 상태 
 
 // 주자창 크기 설정
 const int ROWS = 4; // 주차장의 세로 길이
