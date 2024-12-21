@@ -3,7 +3,7 @@
 #include <vector>
 using namespace std;
 
-// 주차 공간의 종류 정의
+// 주차 공간의 종류 정의 
 const int EMPTY = 0;        // 비어있는 공간  
 const int MOTORBIKE = 1;    // 오토바이 공간
 const int COMPACT = 2;      // 경차 공간
